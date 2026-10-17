@@ -82,7 +82,7 @@ export default async function StudioPage({ searchParams }: { searchParams: Promi
         <aside aria-label="Concepts">
           <form className="mb-3 flex gap-2" role="search">
             {sp.concept && <input type="hidden" name="concept" value={sp.concept} />}
-            <input name="q" defaultValue={sp.q} placeholder="Search concepts" aria-label="Search concepts" className="h-9 min-w-0 flex-1 rounded-lg border border-ink-600 bg-ink-850 px-3 text-sm placeholder:text-ink-400 focus:border-gold-400 focus:outline-none" />
+            <input name="q" defaultValue={sp.q} placeholder="Search" aria-label="Search concepts" className="h-9 min-w-0 flex-1 rounded-lg border border-ink-600 bg-ink-850 px-3 text-sm placeholder:text-ink-400 focus:border-gold-400 focus:outline-none" />
             <select name="status" defaultValue={sp.status ?? ""} aria-label="Filter by status" className="h-9 w-28 rounded-lg border border-ink-600 bg-ink-850 px-1 text-xs">
               <option value="">All</option>
               {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

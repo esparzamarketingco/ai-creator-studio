@@ -2,15 +2,13 @@ import { mockProvidersEnabled } from "../env";
 import { manualDestination } from "./manual";
 import { mockDestination, mockImageProvider, mockVideoProvider } from "./mock";
 import type { GenerationProvider, PublishingDestination } from "./types";
+import { generationAdapters, publishingAdapters } from "./adapters";
 
-/**
- * Register real adapters here once their API, content policy, likeness rules, commercial
- * rights and pricing have been verified. See README → "Connecting a real provider".
- */
-const realGenerators: GenerationProvider[] = [];
-const realDestinations: PublishingDestination[] = [];
+/** Real adapters are listed in ./adapters (see README → "Connecting a real provider"). */
+const realGenerators: GenerationProvider[] = [...generationAdapters];
+const realDestinations: PublishingDestination[] = [...publishingAdapters];
 
-/** Adapters register themselves at startup (see src/server/providers/index.ts). */
+/** Tests and plugins can also register an adapter at runtime. */
 export function registerGenerationProvider(p: GenerationProvider) {
   if (!realGenerators.some((g) => g.key === p.key)) realGenerators.push(p);
 }
