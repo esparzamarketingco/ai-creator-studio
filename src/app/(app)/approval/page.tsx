@@ -41,7 +41,7 @@ export default async function ApprovalPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader eyebrow={current.name} title="Approval inbox" description="Watch every final video in full, then approve, reject or request revisions. Approval applies to this exact file version only." />
-      <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] [&>*]:min-w-0">
         <aside className="space-y-5" aria-label="Review queue">
           <div>
             <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gold-400">Awaiting my approval ({pending.length})</h2>

@@ -6,7 +6,7 @@ const PUBLIC = ["/login", "/register", "/forgot-password", "/reset-password", "/
  * Fast redirect for signed-out visitors. This only checks that a session cookie exists;
  * every page, action and API route validates the session against the database.
  */
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return NextResponse.next();
   if (!req.cookies.get("acs_session")) {

@@ -86,7 +86,8 @@ export function storage(): MediaStorage {
     if (!e.S3_BUCKET) throw new Error("STORAGE_DRIVER=s3 requires S3_BUCKET");
     instance = new S3Storage(e.S3_BUCKET);
   } else {
-    instance = new LocalStorage(path.resolve(process.cwd(), e.STORAGE_DIR));
+    // Runtime-only path: keep the bundler from tracing the whole project for it.
+    instance = new LocalStorage(path.resolve(/* turbopackIgnore: true */ process.cwd(), e.STORAGE_DIR));
   }
   return instance;
 }

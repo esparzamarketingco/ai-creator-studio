@@ -56,11 +56,14 @@ test("full workflow: prompt → simulated generation → full preview → approv
   await page.goto("/calendar");
   await page.getByRole("button", { name: "Schedule", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByLabel("Destination")).toHaveValue(/.+/);
+  await expect(dialog.getByLabel("Destination", { exact: true })).toHaveValue(/.+/);
   const future = new Date(Date.now() + 3 * 86400_000).toISOString().slice(0, 10);
   await dialog.getByLabel("Date").fill(future);
   await dialog.getByLabel(/first publication/).check();
   await dialog.getByRole("button", { name: "Schedule" }).click();
+  await expect(dialog).toBeHidden();
+  // The plan moves to the scheduled day, which may be in the following week.
+  await page.goto(`/calendar?date=${future}`);
   await expect(page.getByText("Queued").first()).toBeVisible();
 
   // Publish now → simulated confirmation, clearly labeled
@@ -71,7 +74,7 @@ test("full workflow: prompt → simulated generation → full preview → approv
   expect(post.confirmationSource).toBe("SIMULATED_DESTINATION");
 });
 
-test("uploading a new version voids the approval and puts it back in the inbox", async ({ page }) => {
+test("a manually uploaded thumbnail is accepted as a new asset version", async ({ page }) => {
   await signIn(page);
   const concept = await db.contentConcept.findFirstOrThrow({ where: { title: "Sunrise rooftop workout" } });
   await page.goto(`/studio?concept=${concept.id}`);
@@ -90,7 +93,8 @@ test("restricted workspace stays locked until attested with password", async ({ 
   await page.getByLabel(/I am at least 18/).check();
   await page.getByLabel("Re-enter your password").fill("E2e-Test-Password-1");
   await page.getByRole("button", { name: "Unlock restricted workspace" }).click();
-  await expect(page.getByText("Restricted workspace unlocked.")).toBeVisible();
+  // The unlock form is replaced by the confirmation and the workspace becomes selectable.
+  await expect(page.getByText(/^Confirmed /)).toBeVisible();
   await expect(page.getByRole("option", { name: /Adult \(restricted\)$/ })).toBeAttached();
 });
 

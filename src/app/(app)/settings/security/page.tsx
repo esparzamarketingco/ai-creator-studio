@@ -27,7 +27,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Security & audit" description="Sessions, two-factor authentication, restricted-workspace access, data export and the full audit history." />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Account" />
           <CardBody className="space-y-2 text-sm">

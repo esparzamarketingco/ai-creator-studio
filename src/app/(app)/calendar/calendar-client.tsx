@@ -159,7 +159,7 @@ export function ManualPackagePanel({ pkg }: { pkg: { scheduleId: string; status:
         </div>
         <Link href="/calendar" className="text-xs text-ink-400 hover:text-white">Close</Link>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <div className="space-y-3">
           <MediaPreview versionId={pkg.versionId} mimeType={pkg.mimeType} className="aspect-video" />
           <div className="flex flex-wrap gap-2">

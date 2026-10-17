@@ -13,15 +13,19 @@ import { cn } from "@/lib/cn";
 export function MediaPreview({ versionId, mimeType, isSimulated, className, onComplete, controls = true }: {
   versionId: string; mimeType: string; isSimulated?: boolean; className?: string; onComplete?: () => void; controls?: boolean;
 }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // The loaded result remembers which version it belongs to, so switching versions shows the spinner again.
+  const [loaded, setLoaded] = useState<{ versionId: string; url: string | null; error: string | null } | null>(null);
   useEffect(() => {
     let alive = true;
-    setUrl(null);
-    setError(null);
-    signedUrlAction(versionId).then((r) => { if (!alive) return; if (r.ok && r.data) setUrl(r.data); else setError(r.ok ? "Unavailable" : r.error); });
+    signedUrlAction(versionId).then((r) => {
+      if (!alive) return;
+      setLoaded({ versionId, url: r.ok && r.data ? r.data : null, error: r.ok ? (r.data ? null : "Unavailable") : r.error });
+    });
     return () => { alive = false; };
   }, [versionId]);
+  const current = loaded?.versionId === versionId ? loaded : null;
+  const url = current?.url ?? null;
+  const error = current?.error ?? null;
   useEffect(() => {
     if (!url || mimeType.startsWith("video/") || !onComplete) return;
     const t = setTimeout(onComplete, 1500);

@@ -78,7 +78,7 @@ export default async function StudioPage({ searchParams }: { searchParams: Promi
           Only providers whose terms explicitly allow adult content, verified by you in Settings → Integrations, can generate here. Planning, prompts, manual uploads, review and scheduling all work now.
         </Notice>
       )}
-      <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] [&>*]:min-w-0">
         <aside aria-label="Concepts">
           <form className="mb-3 flex gap-2" role="search">
             {sp.concept && <input type="hidden" name="concept" value={sp.concept} />}
@@ -179,7 +179,7 @@ export default async function StudioPage({ searchParams }: { searchParams: Promi
                 <CardHeader title="Media for this concept" description="Upload a finished video or thumbnail manually. Each upload is a new immutable version." actions={<Link href="/approval" className="text-xs text-gold-300 hover:underline">Approval inbox →</Link>} />
                 <CardBody className="space-y-4">
                   {detail.assets.length > 0 && (
-                    <ul className="grid gap-2 sm:grid-cols-2">
+                    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 [&>*]:min-w-0">
                       {detail.assets.map((a) => (
                         <li key={a.id} className="flex items-center justify-between gap-2 rounded-lg border border-ink-700 px-3 py-2 text-sm">
                           <span className="min-w-0 truncate">{a.kind.toLowerCase()} · {a.title}</span>

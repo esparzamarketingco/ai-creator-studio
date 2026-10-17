@@ -37,7 +37,7 @@ export function dateInTz(date: Date, tz: string): string {
 }
 
 export function formatInTz(date: Date, tz: string) {
-  return new Intl.DateTimeFormat("en-US", { timeZone: tz, dateStyle: "medium", timeStyle: "short", timeZoneName: "short" }).format(date);
+  return new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(date);
 }
 
 /** Monday-start week (7 dates) containing `dateStr`. */
