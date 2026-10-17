@@ -21,7 +21,7 @@ export async function dashboardData(actor: Actor, workspaceId: string) {
   const missingDays = week.filter((d) => d >= today && !concepts.some((c) => c.plannedDate === d && c.status !== "ARCHIVED"));
   const tomorrow = addDays(today, 1);
   return {
-    workspace, today, week,
+    workspace, today, week, concepts,
     counts: {
       planned: concepts.filter((c) => c.status !== "ARCHIVED").length,
       generated: generatedThisWeek,

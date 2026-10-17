@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
+/* Cinematic dark theme: charcoal / near-black surfaces, white type, champagne accent. */
+@theme {
+  --color-ink-950: #08080a;
+  --color-ink-900: #0e0e11;
+  --color-ink-850: #131317;
+  --color-ink-800: #18181d;
+  --color-ink-700: #222228;
+  --color-ink-600: #2e2e36;
+  --color-ink-500: #45454f;
+  --color-ink-400: #6b6b77;
+  --color-ink-300: #9d9daa;
+  --color-ink-200: #c9c9d3;
+  --color-ink-100: #ececf1;
+  --color-gold-300: #ecd39c;
+  --color-gold-400: #d9b871;
+  --color-gold-500: #c39b4c;
+  --color-gold-600: #9c7a35;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--color-ink-950);
+  color: var(--color-ink-100);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold-400);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-gold-400) 35%, transparent);
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(2px);
 }
