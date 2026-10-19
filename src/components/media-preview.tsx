@@ -31,17 +31,18 @@ export function MediaPreview({ versionId, mimeType, isSimulated, className, onCo
     const t = setTimeout(onComplete, 1500);
     return () => clearTimeout(t);
   }, [url, mimeType, onComplete]);
+  // Media fills the box absolutely and letterboxes inside it, so a 9:16 video in a 16:9 frame is shown whole, not cropped.
   return (
     <div className={cn("relative grid place-items-center overflow-hidden rounded-xl bg-black", className)}>
       {isSimulated && <div className="absolute left-2 top-2 z-10"><SimulatedBadge /></div>}
       {!url && !error && <Spinner className="text-ink-400" />}
       {error && <p role="alert" className="p-4 text-center text-xs text-red-300">{error}</p>}
       {url && mimeType.startsWith("video/") && (
-        <video key={url} src={url} controls={controls} playsInline preload="metadata" onEnded={onComplete} className="max-h-full w-full object-contain" />
+        <video key={url} src={url} controls={controls} playsInline preload="metadata" onEnded={onComplete} className="absolute inset-0 h-full w-full object-contain" />
       )}
       {url && !mimeType.startsWith("video/") && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={isSimulated ? "Simulated placeholder output" : "Asset preview"} className="max-h-full w-full object-contain" />
+        <img src={url} alt={isSimulated ? "Simulated placeholder output" : "Asset preview"} className="absolute inset-0 h-full w-full object-contain" />
       )}
     </div>
   );

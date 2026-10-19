@@ -28,7 +28,7 @@ export function DecisionForm({ versionId, mimeType, isSimulated, canApprove, cur
   const onComplete = useCallback(() => setComplete(true), []);
   return (
     <form action={action} className="space-y-4">
-      <MediaPreview versionId={versionId} mimeType={mimeType} isSimulated={isSimulated} onComplete={onComplete} className="aspect-[9/16] max-h-[70vh] w-full sm:aspect-video" />
+      <MediaPreview versionId={versionId} mimeType={mimeType} isSimulated={isSimulated} onComplete={onComplete} className="aspect-[9/16] max-h-[70vh] w-full sm:aspect-auto sm:h-[60vh]" />
       <p className="text-xs text-ink-400" aria-live="polite">{complete ? "✓ Full preview viewed." : mimeType.startsWith("video/") ? "Play the video to the end to enable approval." : "Review the full image to enable approval."}</p>
       <FormMessage state={state} />
       <input type="hidden" name="assetVersionId" value={versionId} />

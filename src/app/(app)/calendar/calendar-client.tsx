@@ -69,17 +69,21 @@ export function CalendarBoard({ week, today, concepts, destinations, timezones, 
   );
 }
 
+// Day columns are narrow, so long status labels wrap inside the card instead of overflowing it.
+// `!` because cn() concatenates without merging, and Badge sets whitespace-nowrap itself.
+const NARROW_BADGE = "whitespace-normal! rounded-md! text-left";
+
 function ConceptCard({ c, onSchedule }: { c: Concept; onSchedule: () => void }) {
   const active = c.schedules.filter((s) => s.status !== "CANCELED");
   return (
     <article draggable={c.status !== "PUBLISHED"} onDragStart={(e) => e.dataTransfer.setData("text/concept", c.id)}
       className="cursor-grab rounded-xl border border-ink-700 bg-ink-850 p-2.5 active:cursor-grabbing">
       <Link href={`/studio?concept=${c.id}`} className="line-clamp-2 text-sm font-medium text-white hover:underline">{c.title}</Link>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1"><StatusBadge status={c.status} />{c.video?.isSimulated && <SimulatedBadge />}</div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1"><StatusBadge status={c.status} className={NARROW_BADGE} />{c.video?.isSimulated && <SimulatedBadge />}</div>
       <div className="mt-1 text-[11px] text-ink-400">{c.plannedTime ?? "No time"} · {c.timezone.split("/")[1]?.replace("_", " ")}{c.category ? ` · ${c.category}` : ""}</div>
       {active.map((s) => (
         <div key={s.id} className="mt-2 space-y-1 rounded-lg border border-ink-700 bg-ink-900 p-2 text-[11px]">
-          <div className="flex flex-wrap items-center gap-1"><ScheduleBadge status={s.status} simulated={s.simulated} />{s.isPromo && <Badge>promo</Badge>}</div>
+          <div className="flex flex-wrap items-center gap-1"><ScheduleBadge status={s.status} simulated={s.simulated} className={NARROW_BADGE} />{s.isPromo && <Badge>promo</Badge>}</div>
           <div className="text-ink-300">{fmtDateTime(s.scheduledFor, s.timezone)}</div>
           <div className="text-ink-400">→ {s.destination}</div>
           {s.lastError && <div className="text-red-300">{s.lastError} {s.status !== "FAILED" && s.attempts > 0 ? `(attempt ${s.attempts}/${s.maxAttempts})` : ""}</div>}

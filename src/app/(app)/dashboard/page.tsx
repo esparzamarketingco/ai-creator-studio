@@ -51,7 +51,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <Card className="lg:col-span-2">
           <CardHeader title="This week" description="One slot per day" actions={<Link href="/calendar" className="text-xs text-gold-300 hover:underline">Calendar →</Link>} />
           <CardBody className="p-0">
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
                         {items.length === 0 ? (
                           <Link href={`/studio?new=1&date=${day}`} className="text-sm text-ink-400 hover:text-gold-300">+ Plan a video</Link>
                         ) : items.map((c) => (
-                          <Link key={c.id} href={`/studio?concept=${c.id}`} className="flex min-w-0 items-center gap-2 rounded-lg px-1 hover:bg-ink-800">
+                          <Link key={c.id} href={`/studio?concept=${c.id}`} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg px-1 hover:bg-ink-800">
                             <span className="truncate text-sm text-white">{c.title}</span>
                             <StatusBadge status={c.status} />
                             {c.plannedTime && <span className="text-xs text-ink-400">{c.plannedTime}</span>}
@@ -88,12 +88,10 @@ export default async function DashboardPage() {
               {d.upcoming.length === 0 ? <p className="px-5 py-6 text-sm text-ink-400">Nothing scheduled. Approved videos can be scheduled from the calendar.</p> : (
                 <ul className="divide-y divide-ink-800">
                   {d.upcoming.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm text-white">{s.concept.title}</div>
-                        <div className="text-xs text-ink-400">{fmtDateTime(s.scheduledFor, s.timezone)} · {s.integration.displayName}</div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">{s.integration.isSimulated && <SimulatedBadge />}<ScheduleBadge status={s.status} /></div>
+                    <li key={s.id} className="space-y-1 px-5 py-3">
+                      <div className="truncate text-sm text-white">{s.concept.title}</div>
+                      <div className="text-xs text-ink-400">{fmtDateTime(s.scheduledFor, s.timezone)} · {s.integration.displayName}</div>
+                      <div className="flex flex-wrap items-center gap-1">{s.integration.isSimulated && <SimulatedBadge />}<ScheduleBadge status={s.status} /></div>
                     </li>
                   ))}
                 </ul>

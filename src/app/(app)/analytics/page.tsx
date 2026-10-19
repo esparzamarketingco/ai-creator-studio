@@ -97,11 +97,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             <StatTile label="Revenue / subscriber" value={fmtMoney(s.revenuePerSubscriber)} />
             <StatTile label="Acquisition cost" value={fmtMoney(s.acquisitionCostCents)} sub={s.acquisitionCostCents === null ? "needs ad-spend data" : "per new subscriber"} />
           </section>
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
             <Card><CardHeader title="New subscribers per day" description={demo ? "DEMO" : undefined} /><CardBody><LineChart label="New subscribers per day" points={s.series.map((p) => ({ x: p.date, y: p.metrics.newSubscribers ?? 0 }))} format={(n) => fmtNumber(Math.round(n))} /></CardBody></Card>
             <Card><CardHeader title="Revenue per day" description={demo ? "DEMO" : undefined} /><CardBody><LineChart label="Revenue per day" points={s.series.map((p) => ({ x: p.date, y: p.metrics.revenueCents ?? 0 }))} format={(n) => fmtMoney(Math.round(n))} /></CardBody></Card>
           </div>
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
             {([["Weekly report", (d: string) => isoWeek(d)], ["Monthly report", (d: string) => d.slice(0, 7)]] as const).map(([title, key]) => (
               <Card key={title}>
                 <CardHeader title={title} description={demo ? "DEMO" : undefined} />
@@ -121,7 +121,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         </>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Recommendations" description="Derived only from real data; each shows the numbers behind it. No outcome is guaranteed." />
           <CardBody className="space-y-3">
@@ -149,7 +149,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Experiments" description="A/B tests for captions, thumbnails and posting times." />
           <CardBody className="space-y-4">
