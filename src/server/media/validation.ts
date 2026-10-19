@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { env } from "../env";
 import { AppError } from "../errors";
 
 const run = promisify(execFile);
@@ -19,6 +20,12 @@ export const ALLOWED_TYPES = {
 export type AllowedMime = keyof typeof ALLOWED_TYPES;
 
 export const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
+/** With STORAGE_DRIVER=database each file is one database row held in memory, so keep files small. */
+export const MAX_DATABASE_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+export function maxUploadBytes() {
+  return env().STORAGE_DRIVER === "database" ? MAX_DATABASE_UPLOAD_BYTES : MAX_UPLOAD_BYTES;
+}
 
 /** Detect the real type from magic bytes. The client-supplied type is never trusted. */
 export function sniffMime(buf: Buffer): AllowedMime | null {
@@ -39,7 +46,8 @@ export type MediaProbe = { durationSec?: number; width?: number; height?: number
 /** Validate an uploaded/generated file. Uses ffprobe for video when available. */
 export async function validateMedia(buf: Buffer, opts: { allowSvg?: boolean } = {}): Promise<{ mime: AllowedMime; probe: MediaProbe }> {
   if (buf.length === 0) throw new AppError("VALIDATION", "The file is empty.");
-  if (buf.length > MAX_UPLOAD_BYTES) throw new AppError("VALIDATION", "The file is larger than 500 MB.");
+  const max = maxUploadBytes();
+  if (buf.length > max) throw new AppError("VALIDATION", `The file is larger than ${Math.round(max / 1024 / 1024)} MB.`);
   let mime = sniffMime(buf);
   if (!mime && opts.allowSvg && buf.subarray(0, 200).toString("utf8").includes("<svg")) mime = "image/svg+xml";
   if (!mime) throw new AppError("VALIDATION", "Unsupported file type. Upload MP4, MOV, WebM, JPEG, PNG or WebP.");

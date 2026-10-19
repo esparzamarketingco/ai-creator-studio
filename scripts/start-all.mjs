@@ -3,10 +3,27 @@
 // If either child exits, the other is stopped and this process exits non-zero so the host restarts it.
 import { spawn, spawnSync } from "node:child_process";
 
-const migrate = spawnSync("node_modules/.bin/prisma", ["migrate", "deploy"], { stdio: "inherit" });
-if (migrate.status !== 0) {
+function migrate() {
+  return spawnSync("node_modules/.bin/prisma", ["migrate", "deploy"], { stdio: "inherit" }).status;
+}
+
+// Supabase's shared pooler lives on either aws-0-<region> or aws-1-<region>, and the dashboard is the
+// only place that says which. If the configured one rejects us, try the other before giving up.
+function otherSupabasePooler(url) {
+  const m = /@aws-([01])-([a-z0-9-]+)\.pooler\.supabase\.com/.exec(url ?? "");
+  return m ? url.replace(m[0], `@aws-${m[1] === "0" ? "1" : "0"}-${m[2]}.pooler.supabase.com`) : null;
+}
+
+let status = migrate();
+const alternate = status !== 0 && otherSupabasePooler(process.env.DATABASE_URL);
+if (alternate) {
+  console.error("[start-all] migrations failed; retrying on the other Supabase pooler host");
+  process.env.DATABASE_URL = alternate;
+  status = migrate();
+}
+if (status !== 0) {
   console.error("[start-all] migrations failed; not starting");
-  process.exit(migrate.status ?? 1);
+  process.exit(status ?? 1);
 }
 
 const children = [

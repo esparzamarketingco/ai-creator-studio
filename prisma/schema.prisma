@@ -602,3 +602,13 @@ model BackgroundJob {
 
   @@index([status, runAt])
 }
+
+/// Media bytes for STORAGE_DRIVER=database: keeps a free deployment working with only a database.
+/// Postgres is not built for large blobs, so move to S3/R2 once the library grows.
+model StoredObject {
+  key         String   @id
+  contentType String
+  size        Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+}

@@ -3,6 +3,7 @@ import path from "node:path";
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../env";
+import { db } from "../db";
 import { hmacHex, randomToken, safeEqualHex } from "../crypto";
 
 /** Provider-independent private object storage. Objects are never publicly readable. */
@@ -11,7 +12,7 @@ export interface MediaStorage {
   put(key: string, data: Buffer, contentType: string): Promise<void>;
   get(key: string): Promise<Buffer>;
   delete(key: string): Promise<void>;
-  /** Short-lived URL for the browser. Local driver returns an app route; S3 returns a presigned URL. */
+  /** Short-lived URL for the browser. Local and database drivers return an app route; S3 returns a presigned URL. */
   signedUrl(key: string, opts: { ttlSec: number; versionId: string; userId: string; download?: boolean }): Promise<string>;
 }
 
@@ -41,9 +42,38 @@ class LocalStorage implements MediaStorage {
     return stat(this.resolve(key)).then(() => true, () => false);
   }
   async signedUrl(_key: string, opts: { ttlSec: number; versionId: string; userId: string; download?: boolean }) {
-    const exp = Math.floor(Date.now() / 1000) + opts.ttlSec;
-    const sig = signMediaToken(opts.versionId, opts.userId, exp);
-    return `/api/media/${opts.versionId}?exp=${exp}&sig=${sig}${opts.download ? "&dl=1" : ""}`;
+    return appRouteUrl(opts);
+  }
+}
+
+/** Signed app-route URL shared by the drivers that serve bytes through /api/media. */
+function appRouteUrl(opts: { ttlSec: number; versionId: string; userId: string; download?: boolean }) {
+  const exp = Math.floor(Date.now() / 1000) + opts.ttlSec;
+  const sig = signMediaToken(opts.versionId, opts.userId, exp);
+  return `/api/media/${opts.versionId}?exp=${exp}&sig=${sig}${opts.download ? "&dl=1" : ""}`;
+}
+
+/** Stores bytes in Postgres, for hosts with no persistent disk and no object storage (free tiers). */
+export class DatabaseStorage implements MediaStorage {
+  readonly name = "database";
+  async put(key: string, data: Buffer, contentType: string) {
+    const bytes = new Uint8Array(data);
+    await db.storedObject.upsert({
+      where: { key },
+      create: { key, contentType, size: data.length, data: bytes },
+      update: { contentType, size: data.length, data: bytes },
+    });
+  }
+  async get(key: string) {
+    const row = await db.storedObject.findUnique({ where: { key }, select: { data: true } });
+    if (!row) throw new Error("Stored object not found");
+    return Buffer.from(row.data);
+  }
+  async delete(key: string) {
+    await db.storedObject.deleteMany({ where: { key } });
+  }
+  async signedUrl(_key: string, opts: { ttlSec: number; versionId: string; userId: string; download?: boolean }) {
+    return appRouteUrl(opts);
   }
 }
 
@@ -85,6 +115,8 @@ export function storage(): MediaStorage {
   if (e.STORAGE_DRIVER === "s3") {
     if (!e.S3_BUCKET) throw new Error("STORAGE_DRIVER=s3 requires S3_BUCKET");
     instance = new S3Storage(e.S3_BUCKET);
+  } else if (e.STORAGE_DRIVER === "database") {
+    instance = new DatabaseStorage();
   } else {
     // Runtime-only path: keep the bundler from tracing the whole project for it.
     instance = new LocalStorage(path.resolve(/* turbopackIgnore: true */ process.cwd(), e.STORAGE_DIR));

@@ -1,20 +1,20 @@
-# Render Blueprint: one web service (web app + worker in one container, with a disk for media)
-# and a managed PostgreSQL database. In Render: New > Blueprint > pick this repository.
+# Render Blueprint, free plan: one web service (web app + worker in one container).
+# The database is an external Postgres (for example a Supabase free project) given as DATABASE_URL,
+# and media bytes are stored in that database (STORAGE_DRIVER=database) because free services have no disk.
+# In Render: New > Blueprint > pick this repository, then paste DATABASE_URL when asked.
+# For a paid setup with a disk and a Render database, see "Deploying on Render" in the README.
 services:
   - type: web
     name: ai-creator-studio
     runtime: docker
-    plan: 0.5c-512mb         # smallest paid plan; the free plan cannot have a persistent disk
+    plan: free               # sleeps after 15 idle minutes; the next visit wakes it in about a minute
+    region: oregon
     healthCheckPath: /api/health
-    disk:
-      name: storage
-      mountPath: /app/.storage
-      sizeGB: 10
     envVars:
+      # Postgres connection string. For Supabase use the Session pooler (IPv4), port 5432,
+      # and add ?schema=<your schema>&sslmode=require&connection_limit=3.
       - key: DATABASE_URL
-        fromDatabase:
-          name: ai-creator-studio-db
-          property: connectionString
+        sync: false
       # Random 32-byte keys generated once by Render. Never change them after the first deploy:
       # APP_ENCRYPTION_KEY protects stored credentials and 2FA secrets.
       - key: APP_ENCRYPTION_KEY
@@ -25,7 +25,7 @@ services:
       - key: ALLOW_REGISTRATION
         value: "true"
       - key: STORAGE_DRIVER
-        value: local
+        value: database
       - key: ENABLE_MOCK_PROVIDERS
         value: "true"
       # Optional: email for verification and password resets (e.g. smtps://user:pass@smtp.example.com:465).
@@ -33,10 +33,3 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
-
-databases:
-  - name: ai-creator-studio-db
-    plan: 0.1c-256mb
-    databaseName: ai_creator_studio
-    user: studio
-    postgresMajorVersion: "17"

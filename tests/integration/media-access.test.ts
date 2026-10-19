@@ -46,7 +46,8 @@ describe("private media access", () => {
   });
 
   it("blocks storage path traversal", async () => {
-    await expect(storage().get("../../etc/passwd")).rejects.toThrow(/Invalid storage key/);
+    // The disk driver rejects the key outright; the database driver has no paths, so it is simply absent.
+    await expect(storage().get("../../etc/passwd")).rejects.toThrow(storage().name === "local" ? /Invalid storage key/ : /not found/);
   });
 
   it("requires explicit consent and rights to store a likeness reference", async () => {

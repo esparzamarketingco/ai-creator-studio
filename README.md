@@ -37,7 +37,7 @@ Built with Next.js 16 (App Router, server actions), React 19, TypeScript, Tailwi
 | Brand identity, character profiles (21+ only), authorized likeness references with consent records | Working |
 | Content studio: concepts, structured prompt builder with mandatory safety negatives, prompt versions | Working |
 | Generation queue with retries, idempotency and per-provider capability checks | Working, **with simulated providers only** (no real AI provider is connected) |
-| Manual upload of finished videos and thumbnails, validation (file signature + `ffprobe`), immutable versions, private storage | Working (local disk or any S3-compatible bucket) |
+| Manual upload of finished videos and thumbnails, validation (file signature + `ffprobe`), immutable versions, private storage | Working (local disk, Postgres, or any S3-compatible bucket) |
 | Approval inbox: full preview required, side-by-side version compare, approve / reject / needs revisions with notes, approval invalidated by any new version | Working |
 | Weekly calendar (U.S. time zones), drag to reschedule, publish scheduling, retries with backoff, failure notifications | Working |
 | Publishing | **Simulated destination** (development) and **manual publishing package** (download + caption + checklist + confirm with the post URL). No real platform API is connected. |
@@ -114,7 +114,7 @@ All variables are validated at startup (`src/server/env.ts`). Secrets are only r
 | `APP_ENCRYPTION_KEY` | yes | 32 random bytes as 64 hex chars or base64. AES-256-GCM key for integration credentials and 2FA secrets at rest. **Losing it makes stored credentials and 2FA unreadable.** |
 | `MEDIA_SIGNING_KEY` | yes | Same format. Signs 5-minute private media URLs. Rotating it only invalidates links currently open. |
 | `ALLOW_REGISTRATION` | no (`true`) | Set `false` once your account exists. |
-| `STORAGE_DRIVER` | no (`local`) | `local` or `s3`. Use `s3` in production. |
+| `STORAGE_DRIVER` | no (`local`) | `local` (disk), `s3` (any S3-compatible bucket) or `database` (bytes in Postgres, 50 MB per file; for hosts without a disk). |
 | `STORAGE_DIR` | no (`./.storage`) | Local driver only. Outside `public/`, never served directly. |
 | `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` | for `s3` | Any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO). Objects are written with server-side encryption and read through short-lived presigned URLs. Keep the bucket private. |
 | `SMTP_URL` | no | e.g. `smtps://user:pass@smtp.example.com:465`. Empty means emails are logged instead of sent. |
@@ -219,23 +219,35 @@ The app is two processes sharing one PostgreSQL database and one private bucket:
 
 Serverless-only hosts (e.g. Vercel alone) cannot run the long-lived worker; pair them with a separate worker host or use a platform with background workers.
 
-### Fastest: one Render service from the included Blueprint
+### Free: one Render service from the included Blueprint
 
-`render.yaml` describes a single Docker web service (web app and worker in one container via
-`npm run start:all`, which also applies migrations on boot), a 10 GB persistent disk for media at
-`/app/.storage`, and a managed PostgreSQL database. Render generates `APP_ENCRYPTION_KEY` and
+`render.yaml` describes a single Docker web service on Render's free plan (web app and worker in one
+container via `npm run start:all`, which also applies migrations on boot). Free services have no disk,
+so media bytes are stored in Postgres (`STORAGE_DRIVER=database`, 50 MB per file), and the database is
+an external free Postgres such as a Supabase project. Render generates `APP_ENCRYPTION_KEY` and
 `MEDIA_SIGNING_KEY` (base64 keys are accepted) and provides the public URL, so `APP_URL` can stay unset
 until you add a custom domain.
 
-1. Push this repository to a private GitHub repo.
-2. In Render: **New → Blueprint**, pick the repo, leave `SMTP_URL`/`EMAIL_FROM` empty if you have no email
-   provider yet, and apply. A paid instance type is required for the disk.
+1. Prepare the database. On Supabase, give the app its own role and schema so it cannot read anything else:
+   ```sql
+   create role acs_app with login password '<strong password>';
+   grant acs_app to postgres;
+   create schema studio authorization acs_app;
+   revoke all on schema studio from public;
+   ```
+   Use the **Session pooler** connection (IPv4; Render has no IPv6), port 5432, user `acs_app.<project-ref>`:
+   `postgresql://acs_app.<ref>:<password>@aws-N-<region>.pooler.supabase.com:5432/postgres?schema=studio&sslmode=require&connection_limit=3`.
+   If the `aws-0`/`aws-1` prefix is wrong, `start:all` retries with the other one.
+2. In Render (sign in with GitHub): **New → Blueprint**, pick the repo, paste `DATABASE_URL`, leave
+   `SMTP_URL`/`EMAIL_FROM` empty if you have no email provider yet, and apply.
 3. When the deploy is live, open the `onrender.com` URL, register (the first account becomes the owner),
    enable 2FA in Settings → Security, then set `ALLOW_REGISTRATION=false` in the service's Environment tab.
 4. Copy `APP_ENCRYPTION_KEY` and `MEDIA_SIGNING_KEY` from the Environment tab into a password manager.
 
-A service with a disk runs as one instance (no horizontal scaling). When you outgrow it, move media to
-R2/S3 and split web and worker as below.
+Free-plan limits: the service sleeps after 15 idle minutes (the next visit takes about a minute, and the
+worker only runs while it is awake, so scheduled jobs run late), Supabase free has 500 MB of database and
+pauses after a week without activity. For a steady setup, switch to a paid instance with a disk
+(a paid `plan`, a `disk` mounted at `/app/.storage` and `STORAGE_DRIVER=local`) or to R2/S3 as below.
 
 ### Scalable: Render (or Railway / Fly.io), with Cloudflare R2 for media
 
@@ -286,7 +298,7 @@ docker run -d --env-file .env.production ai-creator-studio npm run worker       
 
 - [ ] `NODE_ENV=production` (set by `npm start` and the Dockerfile)
 - [ ] Strong, unique `APP_ENCRYPTION_KEY` and `MEDIA_SIGNING_KEY`, stored in a password manager
-- [ ] Media storage: a persistent disk with `STORAGE_DRIVER=local` (single service), or `STORAGE_DRIVER=s3` with a **private** bucket, versioning on, key scoped to that bucket
+- [ ] Media storage: a persistent disk with `STORAGE_DRIVER=local` (single service), `STORAGE_DRIVER=database` on a free plan with no disk, or `STORAGE_DRIVER=s3` with a **private** bucket, versioning on, key scoped to that bucket
 - [ ] Managed PostgreSQL with automated backups; a restore has been tested
 - [ ] Migrations run on every release (`npm run start:all` does it on boot; split setups run `npm run db:deploy`)
 - [ ] At least one worker running (`npm run start:all` includes it; split setups run `npm run worker`)

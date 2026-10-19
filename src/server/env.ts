@@ -23,7 +23,7 @@ const schema = z.object({
   APP_ENCRYPTION_KEY: hex64,
   MEDIA_SIGNING_KEY: hex64,
   ALLOW_REGISTRATION: z.enum(["true", "false"]).default("true"),
-  STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+  STORAGE_DRIVER: z.enum(["local", "s3", "database"]).default("local"),
   STORAGE_DIR: z.string().default("./.storage"),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),
