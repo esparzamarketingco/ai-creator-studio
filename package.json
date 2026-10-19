@@ -7,6 +7,7 @@
     "dev:all": "npm run worker:dev & next dev",
     "build": "next build",
     "start": "next start",
+    "start:all": "node scripts/start-all.mjs",
     "worker": "tsx scripts/worker.ts",
     "worker:dev": "tsx watch scripts/worker.ts",
     "lint": "eslint",

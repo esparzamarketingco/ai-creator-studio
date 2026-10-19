@@ -1,8 +1,11 @@
-# Production image for both the web app and the background worker.
+# Production image for the web app and the background worker.
 #   docker build -t ai-creator-studio .
-#   web:    docker run --env-file .env.production -p 3000:3000 ai-creator-studio
-#   worker: docker run --env-file .env.production ai-creator-studio npm run worker
-#   migrations (run once per release): docker run --env-file .env.production ai-creator-studio npm run db:deploy
+#   one service (default): docker run --env-file .env.production -p 3000:3000 -v studio-storage:/app/.storage ai-creator-studio
+#     applies migrations, then runs the web app and the worker together (npm run start:all)
+#   or split them:
+#     web:    docker run --env-file .env.production -p 3000:3000 ai-creator-studio npm start
+#     worker: docker run --env-file .env.production ai-creator-studio npm run worker
+#     migrations (once per release): docker run --env-file .env.production ai-creator-studio npm run db:deploy
 FROM node:22-bookworm-slim AS base
 # ffmpeg provides ffprobe for video validation; openssl is required by Prisma.
 RUN apt-get update \
@@ -24,6 +27,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 COPY --from=build --chown=node:node /app ./
 RUN mkdir -p /app/.storage && chown node:node /app/.storage
-USER node
+# The entrypoint fixes ownership of a mounted storage disk, then runs everything as `node`.
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["node", "scripts/start-all.mjs"]

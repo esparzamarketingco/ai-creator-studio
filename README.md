@@ -110,9 +110,9 @@ All variables are validated at startup (`src/server/env.ts`). Secrets are only r
 | Variable | Required | Purpose |
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string. In production add `?sslmode=require` if your host needs it. |
-| `APP_URL` | yes in production | Public base URL, used in email links. |
-| `APP_ENCRYPTION_KEY` | yes | 64 hex chars. AES-256-GCM key for integration credentials and 2FA secrets at rest. **Losing it makes stored credentials and 2FA unreadable.** |
-| `MEDIA_SIGNING_KEY` | yes | 64 hex chars. Signs 5-minute private media URLs. Rotating it only invalidates links currently open. |
+| `APP_URL` | yes in production | Public base URL, used in email links. Defaults to `RENDER_EXTERNAL_URL` on Render. |
+| `APP_ENCRYPTION_KEY` | yes | 32 random bytes as 64 hex chars or base64. AES-256-GCM key for integration credentials and 2FA secrets at rest. **Losing it makes stored credentials and 2FA unreadable.** |
+| `MEDIA_SIGNING_KEY` | yes | Same format. Signs 5-minute private media URLs. Rotating it only invalidates links currently open. |
 | `ALLOW_REGISTRATION` | no (`true`) | Set `false` once your account exists. |
 | `STORAGE_DRIVER` | no (`local`) | `local` or `s3`. Use `s3` in production. |
 | `STORAGE_DIR` | no (`./.storage`) | Local driver only. Outside `public/`, never served directly. |
@@ -213,18 +213,37 @@ The test setup refuses to run against a database whose name does not end in `_te
 
 The app is two processes sharing one PostgreSQL database and one private bucket:
 
+- **both at once**: `npm run start:all` applies migrations, then runs web and worker together, stopping both if either exits (the Docker image default)
 - **web**: `npm start` (Next.js server)
 - **worker**: `npm run worker` (generation jobs, scheduled publishing, retries, daily reminders). Run exactly one or more; jobs are claimed with `FOR UPDATE SKIP LOCKED`, so several workers are safe.
 
 Serverless-only hosts (e.g. Vercel alone) cannot run the long-lived worker; pair them with a separate worker host or use a platform with background workers.
 
-### Recommended: Render (or Railway / Fly.io), with Cloudflare R2 for media
+### Fastest: one Render service from the included Blueprint
+
+`render.yaml` describes a single Docker web service (web app and worker in one container via
+`npm run start:all`, which also applies migrations on boot), a 10 GB persistent disk for media at
+`/app/.storage`, and a managed PostgreSQL database. Render generates `APP_ENCRYPTION_KEY` and
+`MEDIA_SIGNING_KEY` (base64 keys are accepted) and provides the public URL, so `APP_URL` can stay unset
+until you add a custom domain.
+
+1. Push this repository to a private GitHub repo.
+2. In Render: **New → Blueprint**, pick the repo, leave `SMTP_URL`/`EMAIL_FROM` empty if you have no email
+   provider yet, and apply. A paid instance type is required for the disk.
+3. When the deploy is live, open the `onrender.com` URL, register (the first account becomes the owner),
+   enable 2FA in Settings → Security, then set `ALLOW_REGISTRATION=false` in the service's Environment tab.
+4. Copy `APP_ENCRYPTION_KEY` and `MEDIA_SIGNING_KEY` from the Environment tab into a password manager.
+
+A service with a disk runs as one instance (no horizontal scaling). When you outgrow it, move media to
+R2/S3 and split web and worker as below.
+
+### Scalable: Render (or Railway / Fly.io), with Cloudflare R2 for media
 
 1. **Database** – Create a managed PostgreSQL instance (Render PostgreSQL, Neon, Supabase, RDS…). Enable automated backups.
 2. **Bucket** – Create a private Cloudflare R2 (or S3) bucket and an access key scoped to that bucket only. No public access.
 3. **Code** – Push this repository to a private GitHub repo.
 4. **Web service** (Docker runtime, using the included `Dockerfile`, which installs `ffmpeg` and `openssl`):
-   - Start command: default (`npm start`)
+   - Start command: `npm start` (the image default, `npm run start:all`, runs web and worker together)
    - Pre-deploy command: `npm run db:deploy` (applies migrations)
    - Health check path: `/api/health`
 5. **Background worker** – Same repo and Dockerfile, start command `npm run worker`.
@@ -238,8 +257,12 @@ Without Docker (Node runtime): build command `npm ci --include=dev && npm run bu
 
 ```bash
 docker build -t ai-creator-studio .
+# simplest: one container runs migrations, web and worker; media on a named volume
+docker run -d --env-file .env.production -p 3000:3000 -v studio-storage:/app/.storage ai-creator-studio
+
+# or split, with STORAGE_DRIVER=s3
 docker run --rm --env-file .env.production ai-creator-studio npm run db:deploy   # once per release
-docker run -d --env-file .env.production -p 3000:3000 ai-creator-studio          # web
+docker run -d --env-file .env.production -p 3000:3000 ai-creator-studio npm start # web
 docker run -d --env-file .env.production ai-creator-studio npm run worker        # worker
 ```
 
@@ -263,10 +286,10 @@ docker run -d --env-file .env.production ai-creator-studio npm run worker       
 
 - [ ] `NODE_ENV=production` (set by `npm start` and the Dockerfile)
 - [ ] Strong, unique `APP_ENCRYPTION_KEY` and `MEDIA_SIGNING_KEY`, stored in a password manager
-- [ ] `STORAGE_DRIVER=s3` with a **private** bucket, versioning on, key scoped to that bucket
+- [ ] Media storage: a persistent disk with `STORAGE_DRIVER=local` (single service), or `STORAGE_DRIVER=s3` with a **private** bucket, versioning on, key scoped to that bucket
 - [ ] Managed PostgreSQL with automated backups; a restore has been tested
-- [ ] `npm run db:deploy` runs on every release before the new web version starts
-- [ ] Exactly one or more worker processes running `npm run worker`
+- [ ] Migrations run on every release (`npm run start:all` does it on boot; split setups run `npm run db:deploy`)
+- [ ] At least one worker running (`npm run start:all` includes it; split setups run `npm run worker`)
 - [ ] `SMTP_URL` configured, and a password reset tested end to end
 - [ ] Owner account created, 2FA enabled, `ALLOW_REGISTRATION=false`
 - [ ] `ENABLE_MOCK_PROVIDERS=false` once a real provider is connected (otherwise simulated tools stay visible, clearly labeled)
